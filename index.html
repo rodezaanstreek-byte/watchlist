@@ -404,26 +404,33 @@ function render(){
 function renderGenreBar(){
   var bar=document.getElementById('genreBar');
   if(!bar)return;
-  // Collect all genres for current tab, sorted
   var tab=items.filter(function(i){return i.type===activeTab;});
   var genreSet={};
   for(var i=0;i<tab.length;i++)
     for(var g=0;g<tab[i].genres.length;g++)
       genreSet[tab[i].genres[g]]=true;
   var genres=Object.keys(genreSet).sort();
-  if(!genres.length){bar.innerHTML='';return;}
-  var h='';
+  bar.innerHTML='';
+  if(!genres.length)return;
   if(activeGenre){
-    h+='<button class="back-btn" onclick="clearGenre()">&#8592; Alles</button>';
+    var back=document.createElement('button');
+    back.className='back-btn';
+    back.textContent='← Alles';
+    back.onclick=clearGenre;
+    bar.appendChild(back);
   }
   for(var j=0;j<genres.length;j++){
-    var g2=genres[j];
-    h+='<button class="gpill'+(activeGenre===g2?' on':'')+'" onclick="filterGenre(this.dataset.g)" data-g="'+g2+'">'+g2+'</button>';
+    (function(name){
+      var btn=document.createElement('button');
+      btn.className='gpill'+(activeGenre===name?' on':'');
+      btn.textContent=name;
+      btn.onclick=function(){filterGenre(name);};
+      bar.appendChild(btn);
+    })(genres[j]);
   }
-  bar.innerHTML=h;
 }
 
-function filterGenre(el){var g=el.dataset.g;
+function filterGenre(g){
   activeGenre=g;
   render();
   renderGenreBar();
@@ -434,6 +441,7 @@ function clearGenre(){
   render();
   renderGenreBar();
 }
+
 
 function tw(id){var x=items.find(function(i){return i.id===id;});if(x){x.watched=!x.watched;save(items);render();renderGenreBar();checkAll();}}
 function tn(id){openNotes[id]=!openNotes[id];render();renderGenreBar();checkAll();if(openNotes[id])setTimeout(function(){var t=document.querySelector('#c-'+id+' .ntxt');if(t)t.focus();},50);}
