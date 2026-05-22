@@ -120,6 +120,12 @@ h1{font-family:'Lora',serif;font-size:1.7rem;letter-spacing:-.3px}
 .sicon{width:54px!important;height:32px!important;border-radius:6px!important;overflow:hidden!important;border:1px solid rgba(0,0,0,.1)!important;display:inline-flex!important;flex-shrink:0!important;cursor:pointer!important}.sicon img{width:100%!important;height:100%!important;object-fit:cover!important;display:block!important;padding:0!important}.s-none{opacity:.2!important;cursor:default!important}
 .sbadge{display:inline-flex;align-items:center;justify-content:center;width:36px;height:22px;border-radius:5px;font-family:'DM Sans',sans-serif;font-size:11px;font-weight:800;flex-shrink:0;letter-spacing:.02em;border:none;transition:opacity .15s}
 .sbadge.s-none{opacity:.18}
+.genre-bar{display:flex;gap:7px;overflow-x:auto;padding:0 20px 10px;scrollbar-width:none;min-height:0;transition:all .2s}
+.genre-bar:empty{padding:0}
+.genre-bar::-webkit-scrollbar{display:none}
+.gpill{flex-shrink:0;font-size:.72rem;font-weight:600;padding:5px 13px;border-radius:999px;border:none;background:var(--tag);color:var(--accent2);cursor:pointer;text-transform:uppercase;letter-spacing:.05em;transition:all .15s}
+.gpill.on{background:var(--accent2);color:#fff}
+.back-btn{flex-shrink:0;font-size:.72rem;font-weight:600;padding:5px 13px;border-radius:999px;border:1px solid var(--border);background:var(--card);color:var(--muted);cursor:pointer;display:flex;align-items:center;gap:4px}
 </style>
 </head>
 <body>
@@ -134,6 +140,7 @@ h1{font-family:'Lora',serif;font-size:1.7rem;letter-spacing:-.3px}
     <button class="pill" data-f="unwatched">Unwatched</button>
     <button class="pill" data-f="watched">Watched</button>
   </div>
+  <div class="genre-bar" id="genreBar"></div>
 </header>
 <div class="list" id="list"></div>
 <button class="fab" id="fab">+</button>
@@ -213,7 +220,7 @@ var items = load();
 if(!items){items=JSON.parse(JSON.stringify(DEFAULTS));save(items);}
 else{save(items);}// migrate to current key
 
-var activeTab='tv', activeFilter='all', openNotes={}, pendingItem=null, searchResults=[], deleteId=null;
+var activeTab='tv', activeFilter='all', activeGenre=null, openNotes={}, pendingItem=null, searchResults=[], deleteId=null;
 var streamCache={};
 var STREAM_CACHE_KEY='wl_tmdb1';
 var STREAM_TTL=12*60*60*1000;
@@ -352,9 +359,12 @@ function checkAll(){
 // Render
 function render(){
   var tab=items.filter(function(i){return i.type===activeTab;});
+  // Sort alphabetically
+  tab=tab.slice().sort(function(a,b){return a.title.localeCompare(b.title);});
   var fil=tab;
   if(activeFilter==='watched') fil=tab.filter(function(i){return i.watched;});
   if(activeFilter==='unwatched') fil=tab.filter(function(i){return !i.watched;});
+  if(activeGenre) fil=fil.filter(function(i){return i.genres.indexOf(activeGenre)!==-1;});
   var total=tab.length, watched=tab.filter(function(i){return i.watched;}).length;
   document.getElementById('cnt').textContent=total+' title'+(total!==1?'s':'')+(watched?' \u00b7 '+watched+' watched':'');
   var el=document.getElementById('list');
@@ -391,13 +401,47 @@ function render(){
   el.innerHTML=h;
 }
 
-function tw(id){var x=items.find(function(i){return i.id===id;});if(x){x.watched=!x.watched;save(items);render();checkAll();}}
-function tn(id){openNotes[id]=!openNotes[id];render();checkAll();if(openNotes[id])setTimeout(function(){var t=document.querySelector('#c-'+id+' .ntxt');if(t)t.focus();},50);}
+function renderGenreBar(){
+  var bar=document.getElementById('genreBar');
+  if(!bar)return;
+  // Collect all genres for current tab, sorted
+  var tab=items.filter(function(i){return i.type===activeTab;});
+  var genreSet={};
+  for(var i=0;i<tab.length;i++)
+    for(var g=0;g<tab[i].genres.length;g++)
+      genreSet[tab[i].genres[g]]=true;
+  var genres=Object.keys(genreSet).sort();
+  if(!genres.length){bar.innerHTML='';return;}
+  var h='';
+  if(activeGenre){
+    h+='<button class="back-btn" onclick="clearGenre()">&#8592; Alles</button>';
+  }
+  for(var j=0;j<genres.length;j++){
+    var g2=genres[j];
+    h+='<button class="gpill'+(activeGenre===g2?' on':'')+'" onclick="filterGenre(this.dataset.g)" data-g="'+g2+'">'+g2+'</button>';
+  }
+  bar.innerHTML=h;
+}
+
+function filterGenre(el){var g=el.dataset.g;
+  activeGenre=g;
+  render();
+  renderGenreBar();
+}
+
+function clearGenre(){
+  activeGenre=null;
+  render();
+  renderGenreBar();
+}
+
+function tw(id){var x=items.find(function(i){return i.id===id;});if(x){x.watched=!x.watched;save(items);render();renderGenreBar();checkAll();}}
+function tn(id){openNotes[id]=!openNotes[id];render();renderGenreBar();checkAll();if(openNotes[id])setTimeout(function(){var t=document.querySelector('#c-'+id+' .ntxt');if(t)t.focus();},50);}
 function sn(id,v){var x=items.find(function(i){return i.id===id;});if(x){x.notes=v;save(items);}}
 function askdel(id,title){deleteId=id;document.getElementById('delMsg').textContent='Remove "'+title+'"?';document.getElementById('delBack').classList.add('open');}
 document.getElementById('delKeep').onclick=function(){document.getElementById('delBack').classList.remove('open');deleteId=null;};
 document.getElementById('delConfirm').onclick=function(){
-  if(deleteId){items=items.filter(function(i){return i.id!==deleteId;});delete openNotes[deleteId];save(items);render();checkAll();deleteId=null;}
+  if(deleteId){items=items.filter(function(i){return i.id!==deleteId;});delete openNotes[deleteId];save(items);render();renderGenreBar();checkAll();deleteId=null;}
   document.getElementById('delBack').classList.remove('open');
 };
 
@@ -405,15 +449,15 @@ document.getElementById('delConfirm').onclick=function(){
 document.querySelectorAll('.tab').forEach(function(t){
   t.addEventListener('click',function(){
     document.querySelectorAll('.tab').forEach(function(x){x.classList.remove('on');});
-    t.classList.add('on');activeTab=t.dataset.tab;activeFilter='all';
+    t.classList.add('on');activeTab=t.dataset.tab;activeFilter='all';activeGenre=null;
     document.querySelectorAll('.pill').forEach(function(p){p.classList.toggle('on',p.dataset.f==='all');});
-    render();checkAll();
+    render();renderGenreBar();checkAll();
   });
 });
 document.getElementById('pills').addEventListener('click',function(e){
   var p=e.target.closest('.pill');if(!p)return;
   document.querySelectorAll('.pill').forEach(function(x){x.classList.remove('on');});
-  p.classList.add('on');activeFilter=p.dataset.f;render();checkAll();
+  p.classList.add('on');activeFilter=p.dataset.f;render();renderGenreBar();checkAll();
 });
 
 // Add sheet
@@ -516,7 +560,7 @@ document.getElementById('addBtn').onclick=function(){
   activeTab=pendingItem.type;activeFilter='all';
   document.querySelectorAll('.tab').forEach(function(t){t.classList.toggle('on',t.dataset.tab===pendingItem.type);});
   document.querySelectorAll('.pill').forEach(function(p){p.classList.toggle('on',p.dataset.f==='all');});
-  render();checkAll();
+  render();renderGenreBar();checkAll();
   var nid=pendingItem.id;
   setTimeout(function(){var c=document.getElementById('c-'+nid);if(c){c.style.outline='2px solid var(--accent)';setTimeout(function(){c.style.outline='';},1400);}},100);
 };
@@ -545,6 +589,7 @@ function fetchPosters(){
 }
 
 render();
+renderGenreBar();
 fetchPosters();
 checkAll();
 </script>
