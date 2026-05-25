@@ -223,7 +223,7 @@ else{save(items);}// migrate to current key
 
 var activeTab='tv', activeFilter='all', activeGenre=null, openNotes={}, pendingItem=null, searchResults=[], deleteId=null;
 var streamCache={};
-var STREAM_CACHE_KEY='wl_tmdb1';
+var STREAM_CACHE_KEY='wl_tmdb2';
 var STREAM_TTL=12*60*60*1000;
 
 // Load persisted cache
@@ -268,7 +268,11 @@ function openStreamingLink(el){
 // endpoint: /tv/{tmdb_id}/watch/providers or /movie/{tmdb_id}/watch/providers
 // We find tmdb_id by searching with imdb_id via /find/{imdb_id}
 function getTmdbProviders(item, done) {
-  if(streamCache[item.imdb]!==undefined){done(streamCache[item.imdb]);return;}
+  if(streamCache[item.imdb]!==undefined){
+    // Still fetch rating if missing
+    if(!item.rating) fetchRating(item);
+    done(streamCache[item.imdb]);return;
+  }
   var mediaType=item.type==='movie'?'movie':'tv';
   // Step 1: find TMDB id from IMDb id
   fetch('https://api.themoviedb.org/3/find/'+item.imdb+'?api_key='+TMDB_KEY+'&external_source=imdb_id')
@@ -313,6 +317,29 @@ function getTmdbProviders(item, done) {
 // Queue — process one at a time, no rate limit issues (TMDB allows 40 req/10s)
 var tmdbQueue=[];
 var tmdbRunning=false;
+
+function fetchRating(item){
+  var mediaType=item.type==='movie'?'movie':'tv';
+  fetch('https://api.themoviedb.org/3/find/'+item.imdb+'?api_key='+TMDB_KEY+'&external_source=imdb_id')
+  .then(function(r){return r.json();})
+  .then(function(d){
+    var results=(mediaType==='movie'?d.movie_results:d.tv_results)||[];
+    if(!results.length)return;
+    var rating=results[0].vote_average;
+    if(rating){
+      var it=items.find(function(x){return x.imdb===item.imdb;});
+      if(it){
+        it.rating=Math.round(rating*10)/10;
+        save(items);
+        // Update just the year span in DOM
+        var cards=document.querySelectorAll('#c-'+it.id+' .cyear');
+        if(cards.length){
+          cards[0].innerHTML=it.year+'<span class="irating">★ '+it.rating+'</span>';
+        }
+      }
+    }
+  }).catch(function(){});
+}
 
 function queueStreaming(item){
   if(streamCache[item.imdb]!==undefined){
