@@ -126,6 +126,7 @@ h1{font-family:'Lora',serif;font-size:1.7rem;letter-spacing:-.3px}
 .gpill{flex-shrink:0;font-size:.72rem;font-weight:600;padding:5px 13px;border-radius:999px;border:none;background:var(--tag);color:var(--accent2);cursor:pointer;text-transform:uppercase;letter-spacing:.05em;transition:all .15s}
 .gpill.on{background:var(--accent2);color:#fff}
 .back-btn{flex-shrink:0;font-size:.72rem;font-weight:600;padding:5px 13px;border-radius:999px;border:1px solid var(--border);background:var(--card);color:var(--muted);cursor:pointer;display:flex;align-items:center;gap:4px}
+.irating{display:inline-block;margin-left:8px;font-size:.73rem;font-weight:700;color:#f5c518;letter-spacing:.02em}
 </style>
 </head>
 <body>
@@ -276,6 +277,12 @@ function getTmdbProviders(item, done) {
     var results=(mediaType==='movie'?d.movie_results:d.tv_results)||[];
     if(!results.length){streamCache[item.imdb]=[];saveStreamCache();done([]);return;}
     var tmdbId=results[0].id;
+    var rating=results[0].vote_average;
+    if(rating){
+      // Save rating to item
+      var it=items.find(function(x){return x.imdb===item.imdb;});
+      if(it&&!it.rating){it.rating=Math.round(rating*10)/10;save(items);}
+    }
     // Step 2: get watch providers
     return fetch('https://api.themoviedb.org/3/'+mediaType+'/'+tmdbId+'/watch/providers?api_key='+TMDB_KEY);
   })
@@ -383,7 +390,7 @@ function render(){
     h+='<div class="cmain"><div class="poster">'+ph+'</div>';
     h+='<div class="cbody">';
     h+='<div class="ctitle">'+x.title+'</div>';
-    h+='<span class="cyear">'+x.year+'</span>';
+    h+='<span class="cyear">'+x.year+(x.rating?'<span class="irating">★ '+x.rating+'</span>':'')+'</span>';
     h+='<div class="tags">'+tg+'</div>';
     h+='<div class="streaming" id="sw-'+x.imdb+'"></div>';
     h+='</div>';
