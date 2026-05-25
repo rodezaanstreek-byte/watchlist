@@ -245,19 +245,52 @@ var DEFAULTS = [
 ];
 
 // Storage
-function save(d){try{localStorage.setItem(STORE_KEY,JSON.stringify(d));}catch(e){}}
+var SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzFixyKhgXqNFeg2nPlyglzwdn8CmjYvUV64yW4W8u03-YZE7801nVe6vA3Drsg1k9k/exec';
+var syncStatus = '';
+
+function save(d){
+  // Save locally first
+  try{localStorage.setItem(STORE_KEY,JSON.stringify(d));}catch(e){}
+  // Then sync to Google Sheets
+  fetch(SCRIPT_URL, {
+    method:'POST',
+    body:JSON.stringify(d),
+    headers:{'Content-Type':'application/json'}
+  }).then(function(){
+    setSyncStatus('✓ Synced');
+  }).catch(function(){
+    setSyncStatus('⚠ Sync failed');
+  });
+}
+
+function setSyncStatus(msg){
+  syncStatus=msg;
+  var el=document.getElementById('syncStatus');
+  if(el){el.textContent=msg;setTimeout(function(){el.textContent='';},3000);}
+}
+
 function load(){
-  // Try current key first, then all previous keys
-  var keys=['wl2','wl1','watchlist_v9','watchlist_v8','watchlist_v7','watchlist_v6','watchlist_v5','towatch_v4','towatch_v3'];
-  for(var k=0;k<keys.length;k++){
-    try{var r=localStorage.getItem(keys[k]);if(r){var p=JSON.parse(r);if(Array.isArray(p)&&p.length>0)return p;}}catch(e){}
-  }
+  try{var r=localStorage.getItem(STORE_KEY);if(r){var p=JSON.parse(r);if(Array.isArray(p)&&p.length>0)return p;}}catch(e){}
   return null;
 }
 
+function loadFromCloud(cb){
+  fetch(SCRIPT_URL)
+  .then(function(r){return r.json();})
+  .then(function(d){
+    if(Array.isArray(d)&&d.length>0){
+      items=d;
+      try{localStorage.setItem(STORE_KEY,JSON.stringify(d));}catch(e){}
+      cb(true);
+    } else {
+      cb(false);
+    }
+  })
+  .catch(function(){ cb(false); });
+}
+
 var items = load();
-if(!items){items=JSON.parse(JSON.stringify(DEFAULTS));save(items);}
-else{save(items);}// migrate to current key
+if(!items){items=JSON.parse(JSON.stringify(DEFAULTS));}
 
 var activeTab='tv', activeFilter='unwatched', activeGenre=null, openNotes={}, pendingItem=null, searchResults=[], deleteId=null;
 var streamCache={};
@@ -668,10 +701,21 @@ function fetchPosters(){
   next();
 }
 
-render();
-renderGenreBar();
-fetchPosters();
-checkAll();
+// Try cloud first, fall back to local
+loadFromCloud(function(fromCloud){
+  if(fromCloud){
+    render();
+    renderGenreBar();
+    fetchPosters();
+    checkAll();
+    setSyncStatus('✓ Synced');
+  } else {
+    render();
+    renderGenreBar();
+    fetchPosters();
+    checkAll();
+  }
+});
 </script>
 </body>
 </html>
