@@ -717,5 +717,25 @@ loadFromCloud(function(fromCloud){
   }
 });
 </script>
+
+<!-- FOOTER -->
+<div id="footer" style="max-width:680px;margin:32px auto 20px;padding:0 16px 8px;font-size:.72rem;color:var(--muted);line-height:1.7;border-top:1px solid var(--border);padding-top:16px">
+  <p style="margin-bottom:6px"><strong style="color:var(--text)">Disclaimer</strong> — This app does not host, store or distribute any video content. It contains links to third-party websites only. The user is responsible for compliance with applicable laws in their country.</p>
+  <p style="margin-bottom:6px">Streaming availability data provided by <a href="https://www.themoviedb.org" target="_blank" style="color:var(--accent2)">TMDB</a>. Movie and series data by <a href="https://www.omdbapi.com" target="_blank" style="color:var(--accent2)">OMDb</a>.</p>
+  <p>&copy; 2025 Patrick Zoomermeijer &nbsp;&middot;&nbsp; v1.4</p>
+</div>
+
+<!-- SCROLL TO TOP -->
+<button id="upBtn" onclick="window.scrollTo({top:0,behavior:'smooth'})" style="
+  position:fixed;bottom:calc(88px + var(--sb));right:16px;
+  width:36px;height:36px;border-radius:50%;
+  background:var(--card);border:1px solid var(--border);
+  color:var(--muted);font-size:1rem;cursor:pointer;
+  display:none;align-items:center;justify-content:center;
+  box-shadow:0 2px 8px rgba(0,0,0,.12);z-index:150;
+  transition:opacity .2s">&#8679;</button>
+
+
+
 </body>
 </html>
