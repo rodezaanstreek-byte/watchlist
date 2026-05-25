@@ -8,7 +8,38 @@
 <meta name="theme-color" content="#1c1a17">
 <link href="https://fonts.googleapis.com/css2?family=Lora:wght@600;700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
 <style>
-:root{--bg:#f7f4ef;--card:#fff;--border:#e2ddd6;--accent:#c0392b;--accent2:#2c7a6e;--text:#1c1a17;--muted:#888078;--watched:#f0f0ec;--tag:#eef5f4;--sb:env(safe-area-inset-bottom,0px);--st:env(safe-area-inset-top,0px)}
+:root{
+  --bg:#f0ede8;--card:#ffffff;--border:#d4cfc8;
+  --accent:#c0392b;--accent2:#1e6b5e;
+  --text:#111009;--muted:#6b6560;
+  --watched:#e8e5e0;--tag:#e0f0ed;
+  --sb:env(safe-area-inset-bottom,0px);--st:env(safe-area-inset-top,0px)
+}
+@media(prefers-color-scheme:dark){
+  :root{
+    --bg:#0f0f0f;--card:#1a1a1a;--border:#2e2e2e;
+    --accent:#e05252;--accent2:#3eb89a;
+    --text:#f0ede8;--muted:#888078;
+    --watched:#141414;--tag:#1a2e2a;
+  }
+  header{background:rgba(15,15,15,.95)!important}
+  .genre-bar{background:#0f0f0f!important}
+  .pill{background:#1a1a1a!important}
+  .pill.on{background:var(--text)!important;color:#0f0f0f!important}
+  .gpill{background:#1a2e2a!important}
+  .gpill.on{background:var(--accent2)!important;color:#fff!important}
+  .back-btn{background:#1a1a1a!important;color:var(--muted)!important}
+  .fcol input,.fcol select{background:#111!important;color:var(--text)!important;border-color:#2e2e2e!important}
+  .sheet,.cbox{background:#1a1a1a!important}
+  .ritem{background:#111!important}
+  .ritem.on{background:#1a2e2a!important}
+  .preview{background:#111!important}
+  .sbtn.lookup{background:#f0ede8!important;color:#111!important}
+  .limdb{background:#c9a000!important}
+  .noposter{background:#222!important}
+  .backdrop{background:rgba(0,0,0,.7)!important}
+  .cbox-back{background:rgba(0,0,0,.7)!important}
+}
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;padding-bottom:calc(90px + var(--sb))}
 header{position:sticky;top:0;z-index:100;background:rgba(247,244,239,.95);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);padding:calc(var(--st) + 14px) 20px 0;border-bottom:1px solid var(--border)}
@@ -21,6 +52,12 @@ h1{font-family:'Lora',serif;font-size:1.7rem;letter-spacing:-.3px}
 .pills{display:flex;gap:7px;overflow-x:auto;padding:10px 20px;scrollbar-width:none}
 .pills::-webkit-scrollbar{display:none}
 .pill{flex-shrink:0;font-size:.72rem;font-weight:600;padding:5px 13px;border-radius:999px;border:1px solid var(--border);background:var(--card);color:var(--muted);cursor:pointer;text-transform:uppercase;letter-spacing:.05em;transition:all .15s}
+.pill[data-f="unwatched"]{background:rgba(192,57,43,.08);border-color:rgba(192,57,43,.25);color:var(--accent)}
+.pill[data-f="watched"]{background:rgba(30,107,94,.08);border-color:rgba(30,107,94,.25);color:var(--accent2)}
+.pill[data-f="all"]{background:rgba(100,100,100,.06);border-color:var(--border);color:var(--muted)}
+.pill.on[data-f="unwatched"]{background:var(--accent);color:#fff;border-color:var(--accent)}
+.pill.on[data-f="watched"]{background:var(--accent2);color:#fff;border-color:var(--accent2)}
+.pill.on[data-f="all"]{background:var(--text);color:var(--bg);border-color:var(--text)}
 .pill.on{background:var(--text);color:var(--bg);border-color:var(--text)}
 .list{max-width:680px;margin:0 auto;padding:12px 16px 0;display:flex;flex-direction:column;gap:10px}
 .card{background:var(--card);border-radius:14px;border:1px solid var(--border);overflow:hidden}
@@ -137,9 +174,9 @@ h1{font-family:'Lora',serif;font-size:1.7rem;letter-spacing:-.3px}
     <button class="tab" data-tab="movie">🎬 Films</button>
   </div>
   <div class="pills" id="pills">
-    <button class="pill on" data-f="all">All</button>
-    <button class="pill" data-f="unwatched">Unwatched</button>
+    <button class="pill on" data-f="unwatched">Unwatched</button>
     <button class="pill" data-f="watched">Watched</button>
+    <button class="pill" data-f="all">All</button>
   </div>
 </header>
 <div class="genre-bar" id="genreBar"></div>
@@ -221,7 +258,7 @@ var items = load();
 if(!items){items=JSON.parse(JSON.stringify(DEFAULTS));save(items);}
 else{save(items);}// migrate to current key
 
-var activeTab='tv', activeFilter='all', activeGenre=null, openNotes={}, pendingItem=null, searchResults=[], deleteId=null;
+var activeTab='tv', activeFilter='unwatched', activeGenre=null, openNotes={}, pendingItem=null, searchResults=[], deleteId=null;
 var streamCache={};
 var STREAM_CACHE_KEY='wl_tmdb2';
 var STREAM_TTL=12*60*60*1000;
@@ -491,7 +528,7 @@ document.getElementById('delConfirm').onclick=function(){
 document.querySelectorAll('.tab').forEach(function(t){
   t.addEventListener('click',function(){
     document.querySelectorAll('.tab').forEach(function(x){x.classList.remove('on');});
-    t.classList.add('on');activeTab=t.dataset.tab;activeFilter='all';activeGenre=null;
+    t.classList.add('on');activeTab=t.dataset.tab;activeFilter='unwatched';activeGenre=null;
     document.querySelectorAll('.pill').forEach(function(p){p.classList.toggle('on',p.dataset.f==='all');});
     render();renderGenreBar();checkAll();
   });
