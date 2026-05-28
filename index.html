@@ -236,9 +236,40 @@ var OMDB_KEY = '69387715';
 var TMDB_KEY = '81fe9716f1a61f74c52bea7080a86bd7';
 var STORE_KEY = 'wl3';
 
-function save(d){try{localStorage.setItem(STORE_KEY,JSON.stringify(d));}catch(e){}}
-function load(){try{var r=localStorage.getItem(STORE_KEY);if(r){var p=JSON.parse(r);if(Array.isArray(p)&&p.length>0)return p;}}catch(e){}return null;}
-function setSyncStatus(msg){var el=document.getElementById('syncStatus');if(el){el.textContent=msg;setTimeout(function(){el.textContent='';},3000);}}
+var WORKER='https://watchlist-sync.rodezaanstreek.workers.dev';
+var SECRET='Simpel_12';
+
+function save(d){
+  try{localStorage.setItem(STORE_KEY,JSON.stringify(d));}catch(e){}
+  setSyncStatus('↑');
+  fetch(WORKER+'?secret='+SECRET,{
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify(d)
+  }).then(function(){setSyncStatus('✓');}).catch(function(){setSyncStatus('⚠');});
+}
+
+function load(){
+  try{var r=localStorage.getItem(STORE_KEY);if(r){var p=JSON.parse(r);if(Array.isArray(p)&&p.length>0)return p;}}catch(e){}
+  return null;
+}
+
+function setSyncStatus(msg){
+  var el=document.getElementById('syncStatus');
+  if(el){el.textContent=msg;setTimeout(function(){if(el.textContent===msg)el.textContent='';},3000);}
+}
+
+function syncFromCloud(cb){
+  fetch(WORKER+'?secret='+SECRET)
+  .then(function(r){return r.json();})
+  .then(function(d){
+    if(Array.isArray(d)&&d.length>0){
+      items=d;
+      try{localStorage.setItem(STORE_KEY,JSON.stringify(d));}catch(e){}
+      cb(true);
+    } else cb(false);
+  }).catch(function(){cb(false);});
+}
 
 var DEFAULTS = [
   {id:'d01',title:'Surface',year:'2005-2006',type:'tv',imdb:'tt0452718',genres:['Adventure','Drama','Mystery','Sci-Fi','Thriller'],poster:'',watched:false,notes:''},
@@ -673,26 +704,26 @@ function fetchPosters(){
   next();
 }
 
-// Load from localStorage, fall back to full defaults
-var stored = load();
-if(stored && stored.length > 0){
-  // Merge: add any new defaults not already in stored list
-  var storedIds = stored.map(function(i){return i.id;});
-  var newDefaults = DEFAULTS.filter(function(d){return storedIds.indexOf(d.id)===-1;});
-  if(newDefaults.length > 0){
-    items = stored.concat(newDefaults);
-    save(items);
-  } else {
-    items = stored;
+// Load from cloud, fall back to localStorage, fall back to defaults
+syncFromCloud(function(ok){
+  if(!ok){
+    var stored=load();
+    if(stored&&stored.length>0){
+      items=stored;
+      // Add any missing new defaults
+      var ids=stored.map(function(i){return i.id;});
+      var missing=DEFAULTS.filter(function(d){return ids.indexOf(d.id)===-1;});
+      if(missing.length){items=stored.concat(missing);save(items);}
+    } else {
+      items=JSON.parse(JSON.stringify(DEFAULTS));
+      save(items);
+    }
   }
-} else {
-  items = JSON.parse(JSON.stringify(DEFAULTS));
-  save(items);
-}
-render();
-renderGenreBar();
-fetchPosters();
-checkAll();
+  render();
+  renderGenreBar();
+  fetchPosters();
+  checkAll();
+});
 
 
 // Copyright year
