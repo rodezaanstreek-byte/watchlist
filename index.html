@@ -259,17 +259,19 @@ var SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxSQUBPIBnLkPd1Oea3VQW
 var syncStatus = '';
 
 function save(d){
-  // Save locally first
-  try{localStorage.setItem(STORE_KEY,JSON.stringify(d));}catch(e){}
-  // Then sync to Google Sheets
+  // Always save to cloud (authoritative)
+  setSyncStatus('↑ Saving...');
   fetch(SCRIPT_URL, {
     method:'POST',
     body:JSON.stringify(d),
     headers:{'Content-Type':'application/json','X-Secret':'Simpel_12'}
   }).then(function(){
     setSyncStatus('✓ Synced');
+    // Also cache locally for offline use
+    try{localStorage.setItem(STORE_KEY,JSON.stringify(d));}catch(e){}
   }).catch(function(){
-    setSyncStatus('⚠ Sync failed');
+    setSyncStatus('⚠ Sync failed — saved locally');
+    try{localStorage.setItem(STORE_KEY,JSON.stringify(d));}catch(e){}
   });
 }
 
@@ -299,8 +301,8 @@ function loadFromCloud(cb){
   .catch(function(){ cb(false); });
 }
 
-var items = load();
-if(!items){items=JSON.parse(JSON.stringify(DEFAULTS));}
+// Start with empty list — always load from cloud
+var items = [];
 
 var activeTab='tv', activeFilter='unwatched', activeGenre=null, openNotes={}, pendingItem=null, searchResults=[], deleteId=null;
 var streamCache={};
@@ -711,22 +713,28 @@ function fetchPosters(){
   next();
 }
 
-// Try cloud first, fall back to local
+// Always load from cloud — local only if offline
+document.getElementById('list').innerHTML='<div class="empty"><div class="empty-icon">⏳</div><p>Laden...</p></div>';
 loadFromCloud(function(fromCloud){
-  if(fromCloud){
-    render();
-    renderGenreBar();
-    fetchPosters();
-    checkAll();
-    setSyncStatus('✓ Synced');
-  } else {
-    render();
-    renderGenreBar();
-    fetchPosters();
-    checkAll();
+  if(!fromCloud){
+    // Offline — use local cache
+    var cached = load();
+    if(cached && cached.length>0){
+      items = cached;
+      setSyncStatus('⚠ Offline');
+    } else {
+      items = JSON.parse(JSON.stringify(DEFAULTS));
+    }
   }
+  render();
+  renderGenreBar();
+  fetchPosters();
+  checkAll();
 });
 
+
+// Copyright year
+document.getElementById("cpyear").textContent=new Date().getFullYear();
 
 // Up button
 window.addEventListener('scroll',function(){
@@ -757,7 +765,7 @@ document.querySelectorAll('.tab').forEach(function(t){
 <div id="footer" style="max-width:680px;margin:32px auto 20px;padding:0 16px 8px;font-size:.72rem;color:var(--muted);line-height:1.7;border-top:1px solid var(--border);padding-top:16px">
   <p style="margin-bottom:6px"><strong style="color:var(--text)">Disclaimer</strong> — This app does not host, store or distribute any video content. It contains links to third-party websites only. The user is responsible for compliance with applicable laws in their country.</p>
   <p style="margin-bottom:6px">Streaming availability data provided by <a href="https://www.themoviedb.org" target="_blank" style="color:var(--accent2)">TMDB</a>. Movie and series data by <a href="https://www.omdbapi.com" target="_blank" style="color:var(--accent2)">OMDb</a>.</p>
-  <p>&copy; <script>document.write(new Date().getFullYear())</script> Patrick Zoomermeijer &nbsp;&middot;&nbsp; v1.4</p>
+  <p>&copy; <span id="cpyear"></span> Patrick Zoomermeijer &nbsp;&middot;&nbsp; v1.4</p>
 </div>
 
 <!-- SCROLL TO TOP -->
