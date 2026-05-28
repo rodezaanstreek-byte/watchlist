@@ -258,27 +258,19 @@ var DEFAULTS = [
 ];
 
 // Storage
-var SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxSQUBPIBnLkPd1Oea3VQWu0_OHn9IgbZKpkEYvTS7AJI8i0qESWJrL8g0xMWsg71-EDg/exec';
+var SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxCR92U6EH0MHrcgmIDvaB1P2KjrOsywTnv1-BcGkhVwCYYTIenT4D832_pJBgeInMJtQ/exec';
 var syncStatus = '';
 
 function save(d){
-  // Always save to cloud (authoritative)
   setSyncStatus('↑ Saving...');
-  console.log('[Save] Sending to cloud, items:', d.length);
-  fetch(SCRIPT_URL, {
-    method:'POST',
-    body:JSON.stringify(d),
-    headers:{'Content-Type':'application/json','X-Secret':'Simpel_12'}
-  }).then(function(r){
-    console.log('[Save] Response status:', r.status);
-    return r.text();
-  }).then(function(t){
-    console.log('[Save] Response:', t);
+  var encoded = encodeURIComponent(JSON.stringify(d));
+  fetch(SCRIPT_URL+'?secret=Simpel_12&action=write&data='+encoded)
+  .then(function(r){ return r.text(); })
+  .then(function(t){
     setSyncStatus('✓ Synced');
     try{localStorage.setItem(STORE_KEY,JSON.stringify(d));}catch(e){}
-  }).catch(function(e){
-    console.log('[Save] Error:', e.message);
-    setSyncStatus('⚠ Sync failed');
+  }).catch(function(){
+    setSyncStatus('⚠ Offline');
     try{localStorage.setItem(STORE_KEY,JSON.stringify(d));}catch(e){}
   });
 }
@@ -295,14 +287,9 @@ function load(){
 }
 
 function loadFromCloud(cb){
-  console.log('[Load] Fetching from cloud...');
   fetch(SCRIPT_URL+'?secret=Simpel_12')
-  .then(function(r){
-    console.log('[Load] Status:', r.status);
-    return r.json();
-  })
+  .then(function(r){ return r.json(); })
   .then(function(d){
-    console.log('[Load] Got', Array.isArray(d)?d.length:'non-array', 'items');
     if(Array.isArray(d)&&d.length>0){
       items=d;
       try{localStorage.setItem(STORE_KEY,JSON.stringify(d));}catch(e){}
@@ -311,10 +298,7 @@ function loadFromCloud(cb){
       cb(false);
     }
   })
-  .catch(function(e){
-    console.log('[Load] Error:', e.message);
-    cb(false);
-  });
+  .catch(function(){ cb(false); });
 }
 
 // Start with empty list — always load from cloud
