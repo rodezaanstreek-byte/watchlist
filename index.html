@@ -722,24 +722,26 @@ function fetchPosters(){
   next();
 }
 
-// Always load from cloud — local only if offline
-document.getElementById('list').innerHTML='<div class="empty"><div class="empty-icon">⏳</div><p>Laden...</p></div>';
-loadFromCloud(function(fromCloud){
-  if(!fromCloud){
-    // Offline — use local cache
-    var cached = load();
-    if(cached && cached.length>0){
-      items = cached;
-      setSyncStatus('⚠ Offline');
-    } else {
-      items = JSON.parse(JSON.stringify(DEFAULTS));
-    }
+// Load from localStorage, fall back to full defaults
+var stored = load();
+if(stored && stored.length > 0){
+  // Merge: add any new defaults not already in stored list
+  var storedIds = stored.map(function(i){return i.id;});
+  var newDefaults = DEFAULTS.filter(function(d){return storedIds.indexOf(d.id)===-1;});
+  if(newDefaults.length > 0){
+    items = stored.concat(newDefaults);
+    save(items);
+  } else {
+    items = stored;
   }
-  render();
-  renderGenreBar();
-  fetchPosters();
-  checkAll();
-});
+} else {
+  items = JSON.parse(JSON.stringify(DEFAULTS));
+  save(items);
+}
+render();
+renderGenreBar();
+fetchPosters();
+checkAll();
 
 
 // Copyright year
