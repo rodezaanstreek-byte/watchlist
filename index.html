@@ -236,6 +236,10 @@ var OMDB_KEY = '69387715';
 var TMDB_KEY = '81fe9716f1a61f74c52bea7080a86bd7';
 var STORE_KEY = 'wl3';
 
+function save(d){try{localStorage.setItem(STORE_KEY,JSON.stringify(d));}catch(e){}}
+function load(){try{var r=localStorage.getItem(STORE_KEY);if(r){var p=JSON.parse(r);if(Array.isArray(p)&&p.length>0)return p;}}catch(e){}return null;}
+function setSyncStatus(msg){var el=document.getElementById('syncStatus');if(el){el.textContent=msg;setTimeout(function(){el.textContent='';},3000);}}
+
 var DEFAULTS = [
   {id:'d01',title:'Surface',year:'2005-2006',type:'tv',imdb:'tt0452718',genres:['Adventure','Drama','Mystery','Sci-Fi','Thriller'],poster:'',watched:false,notes:''},
   {id:'d02',title:'Threshold',year:'2005-2006',type:'tv',imdb:'tt0460686',genres:['Action','Drama','Sci-Fi'],poster:'',watched:false,notes:''},
@@ -267,51 +271,6 @@ var DEFAULTS = [
 ];
 
 // Storage
-var SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxCR92U6EH0MHrcgmIDvaB1P2KjrOsywTnv1-BcGkhVwCYYTIenT4D832_pJBgeInMJtQ/exec';
-var syncStatus = '';
-
-function save(d){
-  setSyncStatus('↑ Saving...');
-  var encoded = encodeURIComponent(JSON.stringify(d));
-  fetch(SCRIPT_URL+'?secret=Simpel_12&action=write&data='+encoded)
-  .then(function(r){ return r.text(); })
-  .then(function(t){
-    setSyncStatus('✓ Synced');
-    try{localStorage.setItem(STORE_KEY,JSON.stringify(d));}catch(e){}
-  }).catch(function(){
-    setSyncStatus('⚠ Offline');
-    try{localStorage.setItem(STORE_KEY,JSON.stringify(d));}catch(e){}
-  });
-}
-
-function setSyncStatus(msg){
-  syncStatus=msg;
-  var el=document.getElementById('syncStatus');
-  if(el){el.textContent=msg;setTimeout(function(){el.textContent='';},3000);}
-}
-
-function load(){
-  try{var r=localStorage.getItem(STORE_KEY);if(r){var p=JSON.parse(r);if(Array.isArray(p)&&p.length>0)return p;}}catch(e){}
-  return null;
-}
-
-function loadFromCloud(cb){
-  fetch(SCRIPT_URL+'?secret=Simpel_12')
-  .then(function(r){ return r.json(); })
-  .then(function(d){
-    if(Array.isArray(d)&&d.length>0){
-      items=d;
-      try{localStorage.setItem(STORE_KEY,JSON.stringify(d));}catch(e){}
-      cb(true);
-    } else {
-      cb(false);
-    }
-  })
-  .catch(function(){ cb(false); });
-}
-
-// Start with empty list — always load from cloud
-var items = [];
 
 var activeTab='tv', activeFilter='unwatched', activeGenre=null, openNotes={}, pendingItem=null, searchResults=[], deleteId=null;
 var streamCache={};
