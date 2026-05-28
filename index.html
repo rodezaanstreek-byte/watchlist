@@ -255,7 +255,7 @@ var DEFAULTS = [
 ];
 
 // Storage
-var SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzFixyKhgXqNFeg2nPlyglzwdn8CmjYvUV64yW4W8u03-YZE7801nVe6vA3Drsg1k9k/exec';
+var SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxSQUBPIBnLkPd1Oea3VQWu0_OHn9IgbZKpkEYvTS7AJI8i0qESWJrL8g0xMWsg71-EDg/exec';
 var syncStatus = '';
 
 function save(d){
@@ -265,7 +265,7 @@ function save(d){
   fetch(SCRIPT_URL, {
     method:'POST',
     body:JSON.stringify(d),
-    headers:{'Content-Type':'application/json'}
+    headers:{'Content-Type':'application/json','X-Secret':'Simpel_12'}
   }).then(function(){
     setSyncStatus('✓ Synced');
   }).catch(function(){
@@ -285,7 +285,7 @@ function load(){
 }
 
 function loadFromCloud(cb){
-  fetch(SCRIPT_URL)
+  fetch(SCRIPT_URL+'?secret=Simpel_12')
   .then(function(r){return r.json();})
   .then(function(d){
     if(Array.isArray(d)&&d.length>0){
