@@ -364,10 +364,12 @@ function getTmdbProviders(item, done) {
     if(!results.length){streamCache[item.imdb]=[];saveStreamCache();done([]);return;}
     var tmdbId=results[0].id;
     var rating=results[0].vote_average;
-    if(rating){
-      // Save rating to item
-      var it=items.find(function(x){return x.imdb===item.imdb;});
-      if(it&&!it.rating){it.rating=Math.round(rating*10)/10;save(items);}
+    var it=items.find(function(x){return x.imdb===item.imdb;});
+    if(it){
+      var changed=false;
+      if(rating&&!it.rating){it.rating=Math.round(rating*10)/10;changed=true;}
+      if(tmdbId&&!it.tmdbId){it.tmdbId=tmdbId;changed=true;}
+      if(changed)save(items);
     }
     // Step 2: get watch providers
     return fetch('https://api.themoviedb.org/3/'+mediaType+'/'+tmdbId+'/watch/providers?api_key='+TMDB_KEY);
@@ -407,12 +409,15 @@ function fetchRating(item){
   .then(function(d){
     var results=(mediaType==='movie'?d.movie_results:d.tv_results)||[];
     if(!results.length)return;
+    var tmdbId2=results[0].id;
     var rating=results[0].vote_average;
-    if(rating){
+    if(rating||tmdbId2){
       var it=items.find(function(x){return x.imdb===item.imdb;});
       if(it){
-        it.rating=Math.round(rating*10)/10;
-        save(items);
+        var ch=false;
+        if(rating){it.rating=Math.round(rating*10)/10;ch=true;}
+        if(tmdbId2&&!it.tmdbId){it.tmdbId=tmdbId2;ch=true;}
+        if(ch)save(items);
         // Update just the year span in DOM
         var cards=document.querySelectorAll('#c-'+it.id+' .cyear');
         if(cards.length){
@@ -511,7 +516,9 @@ function render(){
     h+='<div class="notes'+no+'"><textarea class="ntxt" placeholder="Add a note\u2026" onchange="sn(\''+x.id+'\',this.value)">'+(x.notes||'')+'</textarea></div>';
     h+='<div class="lrow">';
     h+='<a class="lbtn limdb" href="https://www.imdb.com/title/'+x.imdb+'/" target="_blank">\u2b50 IMDb</a>';
-    h+='<a class="lbtn lwatch" href="https://vidsrc.ru/embed/'+vt+'/'+x.imdb+'" target="_blank">\u25b6 Watch</a>';
+    var vid=x.type==='movie'?(x.tmdbId||x.imdb):x.imdb;
+    var watchUrl=x.type==='movie'?'https://vidsrc.ru/movie/'+vid+'?colour=00ff9d&autoplay=true&autonextepisode=true&backbutton=https%3A%2F%2Fvidsrc.ru%2F&pausescreen=true':'https://vidsrc.ru/tv/'+vid+'/1/1?colour=00ff9d&autoplay=true&autonextepisode=true&backbutton=https%3A%2F%2Fvidsrc.ru%2F&pausescreen=true';
+    h+='<a class="lbtn lwatch" href="'+watchUrl+'" target="_blank">\u25b6 Watch</a>';
     h+='</div></div>';
   }
   el.innerHTML=h;
